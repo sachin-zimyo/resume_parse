@@ -20,116 +20,91 @@ const configuration = new Configuration({
 });
 const openai = new OpenAIApi(configuration);
 
-// const storage = multer.diskStorage({
-//   destination: (req, file, cb) => {
-//     cb(null, "uploads/");
-//   },
-//   filename: (req, file, cb) => {
-//     const fileName = `${file.originalname}`;
-//     cb(null, fileName);
-//   },
-// });
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/");
+  },
+  filename: (req, file, cb) => {
+    const fileName = `${file.originalname}`;
+    cb(null, fileName);
+  },
+});
 
-// const upload = multer({ storage });
+const upload = multer({ storage });
 
-// const middle = {
-//   clearDir: function (req, res, next) {
-//     try {
-//       fs.readdir("uploads/", (err, files) => {
-//         for (const file of files) {
-//           fs.unlink(path.join("uploads/", file), (err) => {
-//             if (err) throw err;
-//           });
-//         }
-//       });
-//     } catch (err) {
-//       console.error(err);
-//     }
-//     next();
-//   },
-//   uploadss: upload.single("file"),
-// };
+const middle = {
+  clearDir: function (req, res, next) {
+    try {
+      fs.readdir("uploads/", (err, files) => {
+        for (const file of files) {
+          fs.unlink(path.join("uploads/", file), (err) => {
+            if (err) throw err;
+          });
+        }
+      });
+    } catch (err) {
+      console.error(err);
+    }
+    next();
+  },
+  uploadss: upload.single("file"),
+};
 
 app.get("/",(req,res)=>{
   res.send("hello")
 })
 
-app.post("/upload", async (req, res) => {
-  const prompt = "What is your name"
-  //  console.log(typeof(pr))
-try {
-  if (prompt == null || prompt == "") {
-      return res.status(400).json({
-          success: false,
-          message: "Uh oh, no prompt was provided",
-        });
+app.post("/upload", [middle.clearDir, middle.uploadss], async (req, res) => {
+  const dataBuffer = fs.readFileSync(`./uploads/${req.file.originalname}`);
+  let file_type = req.file.originalname.split(".");
+  file_type = file_type[file_type.length - 1];
+  if (file_type === "pdf") {
+    pdf(dataBuffer)
+      .then((data) => {
+        return data.text;
+      })
+      .then((result) => {
+        textForm(result);
+      })
+      .catch((e) => console.log(e));
+    console.log(req.file);
+  } else if (file_type === "docx") {
+    mammoth
+      .extractRawText({ buffer: dataBuffer })
+      .then((result) => {
+        return result.value;
+      })
+      .then((result) => {
+        textForm(result);
+      })
+      .catch((e) => console.log(e));
   }
+  const textForm = async (file_text) => {
+    try {
+      let prompt = `Fill the following fields candidate_name:,phone_number:,email_id:,Previous_Job_and_Company_Name:,Graduation_College:, from the following resume and please leave the field blank if it doesn't exist:${file_text}`;
+      // console.log(file_text)
+      const response = await openai.createCompletion({
+        model: "text-davinci-003",
+        prompt,
+        max_tokens: 1200,
+      });
 
-  const response = await openai.createCompletion({
-    model: "text-davinci-003",
-    prompt,
-    max_tokens: 1200,
-  });
+      const completion = response.data.choices[0].text;
+      let obj = {};
+      completion.split("\n").forEach((line) => {
+        let [key, value] = line.split(": ");
+        key = key.toLocaleLowerCase().split(" ").join("_");
+        obj[key] = value;
+      });
 
-  const completion = response.data.choices[0].text;
-   console.log(response.data.choices)
-  return res.status(200).json({
-    success: true,
-    message: completion,
-  });
-} catch (error) {
-  console.log(error.message);
-}
-  // const dataBuffer = fs.readFileSync(`./uploads/${req.file.originalname}`);
-  // let file_type = req.file.originalname.split(".");
-  // file_type = file_type[file_type.length - 1];
-  // if (file_type === "pdf") {
-  //   pdf(dataBuffer)
-  //     .then((data) => {
-  //       return data.text;
-  //     })
-  //     .then((result) => {
-  //       textForm(result);
-  //     })
-  //     .catch((e) => console.log(e));
-  //   console.log(req.file);
-  // } else if (file_type === "docx") {
-  //   mammoth
-  //     .extractRawText({ buffer: dataBuffer })
-  //     .then((result) => {
-  //       return result.value;
-  //     })
-  //     .then((result) => {
-  //       textForm(result);
-  //     })
-  //     .catch((e) => console.log(e));
-  // }
-  // const textForm = async (file_text) => {
-  //   try {
-  //     let prompt = `Fill the following fields candidate_name:,phone_number:,email_id:,Previous_Job_and_Company_Name:,Graduation_College:, from the following resume and please leave the field blank if it doesn't exist:${file_text}`;
-  //     // console.log(file_text)
-  //     const response = await openai.createCompletion({
-  //       model: "text-davinci-003",
-  //       prompt,
-  //       max_tokens: 2000,
-  //     });
-
-  //     const completion = response.data.choices[0].text;
-  //     let obj = {};
-  //     completion.split("\n").forEach((line) => {
-  //       let [key, value] = line.split(": ");
-  //       key = key.toLocaleLowerCase().split(" ").join("_");
-  //       obj[key] = value;
-  //     });
-
-  //     return res.status(200).json({
-  //       success: true,
-  //       message: obj,
-  //     });
-  //   } catch (error) {
-  //     console.log(error.message);
-  //   }
-  // };
+      return res.status(200).json({
+        success: true,
+        message: obj,
+      });
+    } catch (error) {
+      console.log("hello");
+    }
+  };
 });
 
 app.listen(port, () => {
