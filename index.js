@@ -20,35 +20,35 @@ const configuration = new Configuration({
 });
 const openai = new OpenAIApi(configuration);
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/");
-  },
-  filename: (req, file, cb) => {
-    const fileName = `${file.originalname}`;
-    cb(null, fileName);
-  },
-});
+// const storage = multer.diskStorage({
+//   destination: (req, file, cb) => {
+//     cb(null, "uploads/");
+//   },
+//   filename: (req, file, cb) => {
+//     const fileName = `${file.originalname}`;
+//     cb(null, fileName);
+//   },
+// });
 
-const upload = multer({ storage });
+// const upload = multer({ storage });
 
-const middle = {
-  clearDir: function (req, res, next) {
-    try {
-      fs.readdir("uploads/", (err, files) => {
-        for (const file of files) {
-          fs.unlink(path.join("uploads/", file), (err) => {
-            if (err) throw err;
-          });
-        }
-      });
-    } catch (err) {
-      console.error(err);
-    }
-    next();
-  },
-  uploadss: upload.single("file"),
-};
+// const middle = {
+//   clearDir: function (req, res, next) {
+//     try {
+//       fs.readdir("uploads/", (err, files) => {
+//         for (const file of files) {
+//           fs.unlink(path.join("uploads/", file), (err) => {
+//             if (err) throw err;
+//           });
+//         }
+//       });
+//     } catch (err) {
+//       console.error(err);
+//     }
+//     next();
+//   },
+//   uploadss: upload.single("file"),
+// };
 
 app.get("/",(req,res)=>{
   res.send("hello")
