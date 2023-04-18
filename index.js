@@ -50,6 +50,10 @@ const middle = {
   uploadss: upload.single("file"),
 };
 
+app.get("/",(req,res)=>{
+  res.send("hello")
+})
+
 app.post("/upload", [middle.clearDir, middle.uploadss], async (req, res) => {
   const dataBuffer = fs.readFileSync(`./uploads/${req.file.originalname}`);
   let file_type = req.file.originalname.split(".");
