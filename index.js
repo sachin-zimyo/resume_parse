@@ -13,6 +13,8 @@ app.use(express.urlencoded({ extended: false }));
 
 app.use(cors());
 
+const port = process.env.PORT || 8000
+
 const configuration = new Configuration({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -101,7 +103,7 @@ app.post("/upload", [middle.clearDir, middle.uploadss], async (req, res) => {
   };
 });
 
-app.listen(8080, () => {
+app.listen(port, () => {
   console.log("server started");
 });
 
